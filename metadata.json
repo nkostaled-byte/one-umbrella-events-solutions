@@ -1,0 +1,6 @@
+{
+  "name": "One Umbrella Events Solutions",
+  "description": "Professional event setups, décor, furniture, equipment and infrastructure for weddings, corporate events, and special occasions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
