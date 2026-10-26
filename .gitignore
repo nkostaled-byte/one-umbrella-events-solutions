@@ -14,6 +14,7 @@ coverage/
 .wrangler/
 .aistudio/
 remotion/
+.claude/
 
 # Logs and operating-system files
 *.log
