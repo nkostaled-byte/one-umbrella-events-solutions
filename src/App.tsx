@@ -9,7 +9,6 @@ import {
   Phone, 
   MessageSquare, 
   Facebook, 
-  Menu, 
   X, 
   ChevronRight, 
   ArrowRight, 
@@ -141,9 +140,14 @@ function LiquidGlassThemeToggle({
 
 export default function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileMenuRendered, setMobileMenuRendered] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const [lightboxImage, setLightboxImage] = useState<{ src: string; title: string; desc: string } | null>(null);
+  const [lightboxClosing, setLightboxClosing] = useState(false);
+  const mobileMenuCloseTimer = useRef<number | null>(null);
+  const lightboxCloseTimer = useRef<number | null>(null);
+  const [heroVideoTheme, setHeroVideoTheme] = useState<'light' | 'dark' | null>(null);
 
   // Active section for liquid navigation
   const navLinks = [
@@ -185,6 +189,37 @@ export default function App() {
 
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
+  const openMobileMenu = () => {
+    if (mobileMenuCloseTimer.current !== null) window.clearTimeout(mobileMenuCloseTimer.current);
+    setMobileMenuRendered(true);
+    window.requestAnimationFrame(() => setMobileMenuOpen(true));
+  };
+
+  const closeMobileMenu = () => {
+    setMobileMenuOpen(false);
+    if (mobileMenuCloseTimer.current !== null) window.clearTimeout(mobileMenuCloseTimer.current);
+    mobileMenuCloseTimer.current = window.setTimeout(() => {
+      setMobileMenuRendered(false);
+      mobileMenuCloseTimer.current = null;
+    }, 240);
+  };
+
+  const closeLightbox = () => {
+    setLightboxClosing(true);
+    if (lightboxCloseTimer.current !== null) window.clearTimeout(lightboxCloseTimer.current);
+    lightboxCloseTimer.current = window.setTimeout(() => {
+      setLightboxImage(null);
+      setLightboxClosing(false);
+      lightboxCloseTimer.current = null;
+    }, 200);
+  };
+
+  const openLightbox = (image: { src: string; title: string; desc: string }) => {
+    if (lightboxCloseTimer.current !== null) window.clearTimeout(lightboxCloseTimer.current);
+    setLightboxClosing(false);
+    setLightboxImage(image);
+  };
+
   // Theme state with localStorage persistence and OS preference fallback
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const saved = localStorage.getItem('one_umbrella_theme');
@@ -216,6 +251,63 @@ export default function App() {
     const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
     mediaQuery.addEventListener('change', handler);
     return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
+
+  // Reveal grouped content as it enters the viewport. Without IntersectionObserver,
+  // with reduced motion, or if observer setup fails, content remains fully visible.
+  useEffect(() => {
+    const root = document.documentElement;
+    const targets = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]'));
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (mediaQuery.matches || !('IntersectionObserver' in window) || targets.length === 0) return;
+
+    let observer: IntersectionObserver;
+    let initialCallbackReceived = false;
+    let fallbackTimer = 0;
+    try {
+      observer = new IntersectionObserver((entries) => {
+        initialCallbackReceived = true;
+        window.clearTimeout(fallbackTimer);
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        });
+      }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+
+      targets.forEach((target) => observer.observe(target));
+      root.classList.add('motion-ready');
+      fallbackTimer = window.setTimeout(() => {
+        if (!initialCallbackReceived) {
+          root.classList.remove('motion-ready');
+          observer.disconnect();
+        }
+      }, 1800);
+    } catch {
+      root.classList.remove('motion-ready');
+      return;
+    }
+
+    return () => {
+      window.clearTimeout(fallbackTimer);
+      observer.disconnect();
+      root.classList.remove('motion-ready');
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (lightboxImage) closeLightbox();
+      else if (mobileMenuOpen) closeMobileMenu();
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [lightboxImage, mobileMenuOpen]);
+
+  useEffect(() => () => {
+    if (mobileMenuCloseTimer.current !== null) window.clearTimeout(mobileMenuCloseTimer.current);
+    if (lightboxCloseTimer.current !== null) window.clearTimeout(lightboxCloseTimer.current);
   }, []);
 
   // Update liquid lens position and dimensions smoothly
@@ -397,105 +489,105 @@ export default function App() {
       id: 'decor',
       title: 'Event Décor and Styling',
       description: 'Balloon installations, themed décor, celebration backdrops, table styling and coordinated event setups designed to create an unforgettable atmosphere.',
-      image: '/public/assets/aistudio/event_decor_c9ceaebf.png',
+      image: '/assets/aistudio/event_decor_c9ceaebf.png',
       tag: 'Celebrations & Weddings'
     },
     {
       id: 'furniture',
       title: 'Furniture and Lounge Hire',
       description: 'Sophisticated lounge seating, velvet benches, elegant chairs, coffee tables and coordinated furniture arrangements tailored for any occasion.',
-      image: '/public/assets/aistudio/Furniture_90181b60.png',
+      image: '/assets/aistudio/Furniture_90181b60.png',
       tag: 'Seating & Comfort'
     },
     {
       id: 'marquees',
       title: 'Marquees and Tents',
       description: 'Premium marquee structures and outdoor event-cover setups providing shelter and elegance for gatherings of all sizes.',
-      image: '/public/assets/aistudio/Tent_hire_faf66289.png',
+      image: '/assets/aistudio/Tent_hire_faf66289.png',
       tag: 'Outdoor Infrastructure'
     },
     {
       id: 'stage',
       title: 'Stage, Sound and Lighting',
       description: 'Professional stage installations, high-fidelity speaker systems, DJ setups and dynamic event lighting arrangements for standout presentations.',
-      image: '/public/assets/aistudio/Stage_268f7efe.png',
+      image: '/assets/aistudio/Stage_268f7efe.png',
       tag: 'Production & Audio'
     },
     {
       id: 'jumping-castles',
       title: 'Jumping Castles and Childrens Entertainment',
       description: 'Colourful, safe, and exciting inflatable jumping castles designed to bring endless joy to children’s parties and family celebrations.',
-      image: '/public/assets/aistudio/Children_s_entertainment_66e6e4d7.png',
+      image: '/assets/aistudio/Children_s_entertainment_66e6e4d7.png',
       tag: 'Family & Parties'
     },
     {
       id: 'fencing',
       title: 'Fencing and Event Barriers',
       description: 'Temporary event fencing, black mesh security barriers, and white picket event fencing for entrances, walkways, boundaries and crowd control.',
-      image: '/public/assets/aistudio/Fencing_6a449f8e.png',
+      image: '/assets/aistudio/Fencing_6a449f8e.png',
       tag: 'Safety & Boundaries'
     },
     {
       id: 'weddings',
       title: 'Weddings and Special Occasions',
       description: 'Bespoke décor, furniture arrangement, and complete setup solutions designed specifically for weddings, milestone birthdays, and celebrations.',
-      image: '/public/assets/aistudio/Hero_image_2868e81b.png',
+      image: '/assets/aistudio/Hero_image_2868e81b.png',
       tag: 'Milestone Events'
     },
     {
       id: 'corporate',
       title: 'Corporate Events and Brand Activations',
       description: 'Professional staging, infrastructure, and refined styling for corporate gatherings, brand launches, executive presentations, and galas.',
-      image: '/public/assets/aistudio/Stage_268f7efe.png',
+      image: '/assets/aistudio/Stage_268f7efe.png',
       tag: 'Corporate & Brand'
     },
     {
       id: 'sports',
       title: 'Sports Tournaments and Community Events',
       description: 'Robust outdoor equipment, marquee tents, fencing barriers, and organizational setups for sports tournaments and community festivals.',
-      image: '/public/assets/aistudio/Tent_hire_faf66289.png',
+      image: '/assets/aistudio/Tent_hire_faf66289.png',
       tag: 'Festivals & Tournaments'
     }
   ];
 
   const galleryItems = [
     {
-      src: '/public/assets/aistudio/Hero_image_2868e81b.png',
+      src: '/assets/aistudio/Hero_image_2868e81b.png',
       title: 'Signature Sunset Event Setup',
       desc: 'Complete outdoor celebration infrastructure including stage, marquee, lounge seating and dining.'
     },
     {
-      src: '/public/assets/aistudio/event_decor_c9ceaebf.png',
+      src: '/assets/aistudio/event_decor_c9ceaebf.png',
       title: 'Baby Shower Styling & Décor',
       desc: 'Pink themed celebration table with gold Chivari chairs, balloon arch and floral centrepieces.'
     },
     {
-      src: '/public/assets/aistudio/Furniture_90181b60.png',
+      src: '/assets/aistudio/Furniture_90181b60.png',
       title: 'Lounge Furniture & Seating Arrangement',
       desc: 'Velvet green and black sofas with gold-accented coffee tables under marquee cover.'
     },
     {
-      src: '/public/assets/aistudio/Stage_268f7efe.png',
+      src: '/assets/aistudio/Stage_268f7efe.png',
       title: 'Professional Stage & Backdrop',
       desc: 'Custom branded event backdrop with modern lounge seating and audio staging.'
     },
     {
-      src: '/public/assets/aistudio/Sound_and_lighting_564b3b4a.png',
+      src: '/assets/aistudio/Sound_and_lighting_564b3b4a.png',
       title: 'Stage, Sound and Lighting Rig',
       desc: 'Professional truss lighting, DJ console, and high-output line array speaker system.'
     },
     {
-      src: '/public/assets/aistudio/Tent_hire_faf66289.png',
+      src: '/assets/aistudio/Tent_hire_faf66289.png',
       title: 'Spacious Marquee Tent Installation',
       desc: 'Heavy-duty white marquee structure set up on lush green lawn for large gatherings.'
     },
     {
-      src: '/public/assets/aistudio/Fencing_6a449f8e.png',
+      src: '/assets/aistudio/Fencing_6a449f8e.png',
       title: 'Event Fencing & White Picket Barriers',
       desc: 'Black mesh security fencing and charming white picket barriers organizing event walkways.'
     },
     {
-      src: '/public/assets/aistudio/Children_s_entertainment_66e6e4d7.png',
+      src: '/assets/aistudio/Children_s_entertainment_66e6e4d7.png',
       title: 'Colourful Jumping Castles',
       desc: 'Dual-tower inflatable jumping castle for children’s birthday parties and family events.'
     }
@@ -584,31 +676,37 @@ export default function App() {
           {/* Mobile Menu Button & Theme Toggle */}
           <div className="flex items-center gap-2.5 md:hidden shrink-0 z-20">
             <LiquidGlassThemeToggle theme={theme} onToggle={toggleTheme} />
-            <button 
+            <button
               type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="w-10 h-10 rounded-full flex items-center justify-center bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 border border-black/10 dark:border-white/15 text-[var(--text-primary)] transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 cursor-pointer"
+              onClick={() => mobileMenuOpen ? closeMobileMenu() : openMobileMenu()}
+              className="liquid-glass-hamburger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400"
               aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
               aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-navigation-panel"
             >
-              {mobileMenuOpen ? (
-                <X className="w-5 h-5 text-[var(--text-primary)]" strokeWidth={2.2} />
-              ) : (
-                <Menu className="w-5 h-5 text-[var(--text-primary)]" strokeWidth={2.2} />
-              )}
+              <span className={`hamburger-icon${mobileMenuOpen ? ' is-open' : ''}`} aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </span>
             </button>
           </div>
         </div>
 
         {/* Mobile Dropdown Menu (Clean standard navigation without active styling) */}
-        {mobileMenuOpen && (
-          <div className="md:hidden max-w-7xl mx-auto mt-2 liquid-glass-drawer rounded-3xl p-6 shadow-xl animate-in fade-in slide-in-from-top-4 duration-200">
+        {mobileMenuRendered && (
+          <div
+            id="mobile-navigation-panel"
+            aria-hidden={!mobileMenuOpen}
+            inert={!mobileMenuOpen}
+            className={`mobile-menu-panel md:hidden max-w-7xl mx-auto liquid-glass-drawer rounded-3xl p-6 shadow-xl${mobileMenuOpen ? ' is-open' : ''}`}
+          >
             <nav className="flex flex-col gap-4 text-base font-medium text-[var(--text-primary)]">
               <a 
                 href="#" 
                 onClick={(e) => {
                   scrollToSection(e, 'hero');
-                  setMobileMenuOpen(false);
+                  closeMobileMenu();
                 }}
                 className="py-2 border-b border-[var(--border-color)] flex items-center justify-between hover:text-black dark:hover:text-white transition-colors"
               >
@@ -619,7 +717,7 @@ export default function App() {
                 href="#about" 
                 onClick={(e) => {
                   scrollToSection(e, 'about');
-                  setMobileMenuOpen(false);
+                  closeMobileMenu();
                 }}
                 className="py-2 border-b border-[var(--border-color)] flex items-center justify-between hover:text-black dark:hover:text-white transition-colors"
               >
@@ -630,7 +728,7 @@ export default function App() {
                 href="#services" 
                 onClick={(e) => {
                   scrollToSection(e, 'services');
-                  setMobileMenuOpen(false);
+                  closeMobileMenu();
                 }}
                 className="py-2 border-b border-[var(--border-color)] flex items-center justify-between hover:text-black dark:hover:text-white transition-colors"
               >
@@ -641,7 +739,7 @@ export default function App() {
                 href="#gallery" 
                 onClick={(e) => {
                   scrollToSection(e, 'gallery');
-                  setMobileMenuOpen(false);
+                  closeMobileMenu();
                 }}
                 className="py-2 border-b border-[var(--border-color)] flex items-center justify-between hover:text-black dark:hover:text-white transition-colors"
               >
@@ -652,7 +750,7 @@ export default function App() {
                 href="#contact" 
                 onClick={(e) => {
                   scrollToSection(e, 'contact');
-                  setMobileMenuOpen(false);
+                  closeMobileMenu();
                 }}
                 className="py-2 flex items-center justify-between hover:text-black dark:hover:text-white transition-colors"
               >
@@ -682,7 +780,7 @@ export default function App() {
                 href="#contact" 
                 onClick={(e) => {
                   scrollToSection(e, 'contact');
-                  setMobileMenuOpen(false);
+                  closeMobileMenu();
                 }}
                 className="bg-[#000000] text-[#FFFFFF] hover:bg-[#1A1A1A] dark:bg-[#FFFFFF] dark:text-[#000000] dark:hover:bg-[#F2F2F2] flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold uppercase tracking-wider shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400"
               >
@@ -700,13 +798,15 @@ export default function App() {
         <div className="absolute inset-0 z-0 overflow-hidden">
           <video
             key={theme}
-            autoPlay
+            autoPlay={!prefersReducedMotion}
             muted
             loop
             playsInline
-            preload="auto"
-            poster="/public/assets/aistudio/Hero_image_2868e81b.png"
-            className="w-full h-full object-cover object-[center_35%] transition-opacity duration-500"
+            preload={prefersReducedMotion ? 'none' : 'metadata'}
+            onLoadedData={() => setHeroVideoTheme(theme)}
+            onError={() => setHeroVideoTheme(theme)}
+            poster="/assets/aistudio/Hero_image_2868e81b.png"
+            className={`hero-video w-full h-full object-cover object-[center_35%]${prefersReducedMotion || heroVideoTheme === theme ? ' is-ready' : ''}`}
           >
             <source 
               src={
@@ -723,7 +823,7 @@ export default function App() {
 
         {/* Compact translucent glass information panel */}
         <div className="relative z-10 max-w-[420px] sm:max-w-[460px] mx-4 sm:mx-8 lg:mx-14 mt-16 sm:mt-20">
-          <div className="glass-surface p-6 sm:p-7 lg:p-8 rounded-3xl shadow-2xl">
+          <div className="glass-surface hero-sequence p-6 sm:p-7 lg:p-8 rounded-3xl shadow-2xl">
             <h1 className="font-serif text-3xl sm:text-4xl lg:text-[2.65rem] text-[#242321] dark:text-[#F5F1E8] leading-[1.1] tracking-tight mb-3">
               Every occasion deserves an unforgettable <span className="italic text-[#9b783e] dark:text-[#d4af37]">setup.</span>
             </h1>
@@ -760,7 +860,7 @@ export default function App() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           
           {/* Left Text / Editorial Story */}
-          <div className="lg:col-span-6 space-y-6">
+          <div data-reveal className="lg:col-span-6 space-y-6">
             <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-[#a88d52]">
               <span>About One Umbrella</span>
             </div>
@@ -800,10 +900,10 @@ export default function App() {
           </div>
 
           {/* Right Image Composition */}
-          <div className="lg:col-span-6 relative">
+          <div data-reveal className="lg:col-span-6 relative">
             <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-[var(--border-color)] aspect-[4/3] bg-[var(--bg-secondary)]">
               <img 
-                src="/public/assets/aistudio/event_decor_c9ceaebf.png" 
+                src="/assets/aistudio/event_decor_c9ceaebf.png" 
                 alt="One Umbrella Events Décor and Styling" 
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
               />
@@ -823,7 +923,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           {/* Section Header */}
-          <div className="text-center max-w-3xl mx-auto mb-16 sm:mb-20">
+          <div data-reveal className="text-center max-w-3xl mx-auto mb-16 sm:mb-20">
             <span className="text-xs font-semibold uppercase tracking-widest text-[#a88d52] mb-3 block">
               Our Professional Offerings
             </span>
@@ -840,7 +940,8 @@ export default function App() {
             {serviceList.map((service, index) => (
               <div 
                 key={service.id}
-                className="bg-[var(--card-bg)] rounded-3xl overflow-hidden border border-[var(--border-color)] hover:border-[#a88d52] shadow-sm hover:shadow-2xl transform hover:-translate-y-2 transition-all duration-300 ease-out flex flex-col group will-change-transform"
+                data-reveal
+                className="bg-[var(--card-bg)] rounded-3xl overflow-hidden border border-[var(--border-color)] hover:border-[#a88d52] shadow-sm hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 ease-out flex flex-col group"
               >
                 <div className="relative aspect-[16/10] overflow-hidden bg-[var(--bg-secondary)]">
                   <img 
@@ -884,7 +985,7 @@ export default function App() {
 
       {/* EVENT GALLERY SECTION */}
       <section id="gallery" className="py-24 sm:py-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="text-center max-w-3xl mx-auto mb-16 sm:mb-20">
+        <div data-reveal className="text-center max-w-3xl mx-auto mb-16 sm:mb-20">
           <span className="text-xs font-semibold uppercase tracking-widest text-[#a88d52] mb-3 block">
             Curated Portfolio
           </span>
@@ -901,7 +1002,17 @@ export default function App() {
           {galleryItems.map((item, idx) => (
             <div 
               key={idx}
-              onClick={() => setLightboxImage(item)}
+              onClick={() => openLightbox(item)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  openLightbox(item);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-label={`View ${item.title}`}
+              data-reveal
               className="group relative rounded-3xl overflow-hidden aspect-[4/5] bg-[var(--bg-secondary)] cursor-pointer shadow-sm hover:shadow-2xl transition-all duration-500"
             >
               <img 
@@ -927,7 +1038,7 @@ export default function App() {
         <div className="absolute inset-0 opacity-5 pointer-events-none bg-[radial-gradient(#a88d52_1px,transparent_1px)] [background-size:24px_24px]" />
         
         <div className="max-w-7xl mx-auto relative z-10">
-          <div className="text-center max-w-2xl mx-auto mb-16 sm:mb-20">
+          <div data-reveal className="text-center max-w-2xl mx-auto mb-16 sm:mb-20">
             <span className="text-xs font-semibold uppercase tracking-widest text-[#a88d52] mb-3 block">
               Simple & Transparent Process
             </span>
@@ -941,7 +1052,7 @@ export default function App() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
             
-            <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-sm relative">
+            <div data-reveal className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-sm relative">
               <span className="font-serif italic text-6xl text-[#a88d52]/35 absolute top-5 right-8 select-none">01</span>
               <h3 className="font-serif text-2xl sm:text-3xl text-white mb-3 mt-4">Tell us about your occasion</h3>
               <p className="text-sm text-[#b5ac9b] leading-relaxed">
@@ -949,7 +1060,7 @@ export default function App() {
               </p>
             </div>
 
-            <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-sm relative">
+            <div data-reveal className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-sm relative">
               <span className="font-serif italic text-6xl text-[#a88d52]/35 absolute top-5 right-8 select-none">02</span>
               <h3 className="font-serif text-2xl sm:text-3xl text-white mb-3 mt-4">Discuss your setup</h3>
               <p className="text-sm text-[#b5ac9b] leading-relaxed">
@@ -957,7 +1068,7 @@ export default function App() {
               </p>
             </div>
 
-            <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-sm relative">
+            <div data-reveal className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-sm relative">
               <span className="font-serif italic text-6xl text-[#a88d52]/35 absolute top-5 right-8 select-none">03</span>
               <h3 className="font-serif text-2xl sm:text-3xl text-white mb-3 mt-4">Bring your occasion together</h3>
               <p className="text-sm text-[#b5ac9b] leading-relaxed">
@@ -975,7 +1086,7 @@ export default function App() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
           
           {/* Left Info & Direct Contact */}
-          <div className="lg:col-span-5 space-y-8">
+          <div data-reveal className="lg:col-span-5 space-y-8">
             <div>
               <span className="text-xs font-semibold uppercase tracking-widest text-[#a88d52] mb-3 block">
                 Get In Touch
@@ -1037,7 +1148,7 @@ export default function App() {
           </div>
 
           {/* Right Quote Form */}
-          <div className="lg:col-span-7 bg-[var(--card-bg)] p-8 sm:p-12 rounded-3xl border border-[var(--border-color)] shadow-xl">
+          <div data-reveal className="lg:col-span-7 bg-[var(--card-bg)] p-8 sm:p-12 rounded-3xl border border-[var(--border-color)] shadow-xl">
             {formSubmitted ? (
               <div className="text-center py-16 space-y-6">
                 <div className="w-20 h-20 bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[#000000] dark:text-[#FFFFFF] rounded-full flex items-center justify-center mx-auto">
@@ -1335,15 +1446,20 @@ export default function App() {
       {/* LIGHTBOX MODAL */}
       {lightboxImage && (
         <div 
-          onClick={() => setLightboxImage(null)}
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6"
+          onClick={closeLightbox}
+          data-closing={lightboxClosing}
+          className="lightbox-backdrop fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6"
         >
           <div 
             onClick={e => e.stopPropagation()}
-            className="bg-white rounded-3xl overflow-hidden max-w-4xl w-full shadow-2xl border border-[#e8e2d5] relative animate-in zoom-in-95 duration-200"
+            role="dialog"
+            aria-modal="true"
+            aria-label={lightboxImage.title}
+            tabIndex={-1}
+            className="lightbox-dialog bg-white rounded-3xl overflow-hidden max-w-4xl w-full shadow-2xl border border-[#e8e2d5] relative"
           >
             <button 
-              onClick={() => setLightboxImage(null)}
+              onClick={closeLightbox}
               className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400"
               aria-label="Close modal"
             >
@@ -1374,7 +1490,7 @@ export default function App() {
                       'Colourful Jumping Castles': 'Jumping Castles and Childrens Entertainment',
                     };
                     const mapped = lightboxImage ? galleryServiceMapping[lightboxImage.title] : null;
-                    setLightboxImage(null);
+                    closeLightbox();
                     if (mapped) {
                       handleEnquireService(e, mapped);
                     } else {

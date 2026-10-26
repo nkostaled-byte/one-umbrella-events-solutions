@@ -1,20 +1,76 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# One Umbrella Events Solutions
 
-# Run and deploy your AI Studio app
+Professional event setups, décor, furniture, equipment and infrastructure for weddings, corporate events, and special occasions.
 
-This contains everything you need to run your app locally.
+## Features
 
-View your app in AI Studio: https://ai.studio/apps/f90e240c-2fe1-4c15-a84b-0cf888f5f2b9
+- Modern, responsive event services website
+- Quote/Enquiry form with multi-service selection
+- Dark/light theme with liquid glass UI components
+- Event gallery with lightbox
+- Services showcase with pre-filled enquiry integration
+- Direct contact via phone, WhatsApp, and Facebook
+
+## Tech Stack
+
+- **React 19** + TypeScript
+- **Vite** for development and building
+- **Tailwind CSS v4** for styling
+- **Lucide React** for icons
+- **Motion** for animations
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
-
+**Prerequisites:** Node.js 18+
 
 1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+   ```bash
+   npm install
+   ```
+
+2. Copy `.env.example` to `.env.local` and configure:
+   ```env
+   VITE_FORMS_API_URL="https://your-worker.workers.dev/"
+   VITE_FORMS_CLIENT_ID="your-client-id"
+   ```
+
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
+
+4. Build for production:
+   ```bash
+   npm run build
+   ```
+
+## Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `VITE_FORMS_API_URL` | The deployed Cloudflare Worker URL that handles form submissions |
+| `VITE_FORMS_CLIENT_ID` | Your registered client ID in the My Grafix Forms system |
+
+## Project Structure
+
+```
+src/
+├── App.tsx              # Main application component
+├── main.tsx             # Entry point
+├── index.css            # Global styles & Tailwind imports
+├── quoteSubmission.ts   # Form submission logic
+├── quoteSubmission.test.mjs
+tests/
+public/
+├── assets/              # Images and static assets
+```
+
+## Deployment
+
+The `dist/` folder contains the production build. Deploy to any static hosting (Netlify, Vercel, Cloudflare Pages, etc.) or serve from your own infrastructure.
+
+The form submissions are handled by a separate Cloudflare Worker (My Grafix Dashboard Worker) — configure `VITE_FORMS_API_URL` to point to that worker's endpoint.
+
+## License
+
+Private project – all rights reserved.

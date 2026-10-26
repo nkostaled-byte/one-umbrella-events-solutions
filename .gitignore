@@ -13,7 +13,7 @@ coverage/
 # Local tool state and generated previews
 .wrangler/
 .aistudio/
-remotion/.render/
+remotion/
 
 # Logs and operating-system files
 *.log
